@@ -10,13 +10,15 @@ const WIN_CONDITIONS = {
   spock: ["scissors", "rock"],
 };
 
-function createPlayer() { // object factory
+const ALL_CHOICES = ["rock", "paper", "scissors", "lizard", "spock"];
+
+function createPlayer() {
   return {
     move: null,
   };
 }
 
-function createHuman() {  // object factory
+function createHuman() {
   let playerObject = createPlayer();
 
   let humanObject = {
@@ -30,33 +32,73 @@ function createHuman() {  // object factory
         if (["rock", "paper", "scissors", "lizard", "spock"].includes(choice)) break;
         console.log("Sorry, invalid choice.");
       }
-
       this.move = choice;
     },
   };
   return Object.assign(playerObject, humanObject);
 }
 
+// eslint-disable-next-line max-lines-per-function
 function createComputer() {  // object factory
   let playerObject = createPlayer();
 
   let computerObject = {
-    choose() {
-      const choices = ["rock", "paper", "scissors", "lizard", "spock"];
-      let randomIndex = Math.floor(Math.random() * choices.length);
-      this.move = choices[randomIndex];
+    weight: {},
+
+    choose(historyObj) {
+      this.calculateWeights(historyObj);
+
+      // if there are more than 1 key with a weight of 0:
+      // choose random key with weight of 0
+      // else choose key with smallest weight
+      if (Object.values(this.weight).filter(val => val === 0).length > 1) {
+        let choices = [];
+
+        for (let prop in this.weight) {
+          if (this.weight[prop] === 0) {
+            choices.push(prop);
+          }
+        }
+
+        let randomIndex = Math.floor(Math.random() * choices.length);
+        this.move = choices[randomIndex];
+      } else {
+        let key = Object.keys(this.weight).reduce((a, b) => {
+          return this.weight[a] < this.weight[b] ? a : b;
+        });
+
+        this.move = key;
+      }
+    },
+
+    calculateWeights(historyObj) {
+      // calculate the total number of human wins in past rounds
+      let totalHumanWins = historyObj.outcomes.filter(val => val === "human").length;
+
+      ALL_CHOICES.forEach(choice => {
+        // calculate the number of human wins per move
+        let totalMoveWins = historyObj.outcomes.filter((val, idx) => {
+          return (val === "human") && (historyObj.computerHistory[idx] === choice);
+        }).length;
+
+        // calculate the percentage of human wins per move
+        let percentageWins = (totalMoveWins / totalHumanWins) || 0;
+
+        // create an key with move and percentage wins for move as value
+        this.weight[choice] = percentageWins;
+      });
     },
   };
   return Object.assign(playerObject, computerObject);
 }
 
-function keepScore() {  // object factory
+function scoreKeeper() {
   return {
     scoreboard: { human: 0, computer: 0 },
 
-    updateScore(roundWinner) {
-      if (roundWinner !== "tie") {
-        this.scoreboard[roundWinner] += 1;
+    updateScore(winner) {
+      if (winner !== "tie") {
+        this.scoreboard[winner] += 1;
       }
     },
 
@@ -66,39 +108,91 @@ function keepScore() {  // object factory
   };
 }
 
-const RPSGame = { // engine object: procedural program flow
+function createHistory() {
+  return {
+    humanHistory: [],
+    computerHistory: [],
+    outcomes: [],
+
+    updateHistory(human, computer, winner) {
+      this.humanHistory.push(human);
+      this.computerHistory.push(computer);
+      this.outcomes.push(winner);
+    },
+
+    displayHistory() {
+      console.log();
+      console.log("ROUND HISTORY:");
+      this.humanHistory.forEach((move, idx) => {
+        console.log(`Round ${idx + 1} => You chose: ${move}, computer chose: ${this.computerHistory[idx]}, winner: ${this.outcomes[idx]}`);
+      });
+      console.log();
+    }
+  };
+}
+
+// eslint-disable-next-line max-lines-per-function
+function makeMove(human, computer) {
+  return {
+    humanMove: human.move,
+    computerMove: computer.move,
+    roundWinner: null,
+
+    determineRoundWinner() {
+      if (WIN_CONDITIONS[this.humanMove].includes(this.computerMove)) {
+        this.roundWinner = "human";
+      } else if (this.humanMove === this.computerMove) {
+        this.roundWinner = "tie";
+      } else {
+        this.roundWinner = "computer";
+      }
+    },
+
+    displayRoundWinner() {
+      console.log();
+      console.log(`You chose: ${this.humanMove}`);
+      console.log(`The computer chose: ${this.computerMove}`);
+      console.log();
+
+      switch (this.roundWinner) {
+        case "human":
+          console.log("You win this round!");
+          break;
+        case "computer":
+          console.log("Computer wins this round!");
+          break;
+        default:
+          console.log("It's a tie!");
+      }
+    },
+  };
+}
+
+const RPSGame = {
   human: createHuman(),
   computer: createComputer(),
-  roundWinner: null,
+  oneRound: null,
   score: null,
   gameWinner: null,
+  history: null,
 
   displayWelcomeMessage() {
     console.log("Welcome to Rock, Paper, Scissors, Lizard, Spock!");
     console.log("Win 5 rounds to win the game.");
+    console.log();
+  },
+
+  displayRules() {
+    console.log("Here are the Game Rules:");
+    console.log("=> Rock crushes Scissors & Lizard");
+    console.log("=> Paper covers Rock & disproves Spock");
+    console.log("=> Scissors cuts Paper & decapitaes Lizard");
+    console.log("=> Lizard poisons Spock & eats Paper");
+    console.log("=> Spock smashes Scissors & vaporizes Rock");
   },
 
   displayGoodbyeMessage() {
     console.log("Thanks for playing Rock, Paper, Scissors, Lizard, Spock. Goodbye!");
-  },
-
-  displayRoundWinner() { // STOPPED HERE CLEAN THIS UP A BIT
-    let humanMove = this.human.move;
-    let computerMove = this.computer.move;
-
-    console.log(`You chose: ${this.human.move}`);
-    console.log(`The computer chose: ${this.computer.move}`);
-
-    if (WIN_CONDITIONS[humanMove].includes(computerMove)) {
-      this.roundWinner = "human";
-      console.log('You win!');
-    } else if (humanMove === computerMove) {
-      this.roundWinner = "tie";
-      console.log("It's a tie");
-    } else {
-      this.roundWinner = "computer";
-      console.log('Computer wins!');
-    }
   },
 
   completedRounds() {
@@ -121,14 +215,30 @@ const RPSGame = { // engine object: procedural program flow
     }
   },
 
-  playOneGame() { // each games is 5 rounds
+  nextRoundMessage() {
+    console.log("Please hit enter to continue to next round.");
+    readline.question();
+    console.clear();
+  },
+
+  playOneGame() {
     while (true) {
       this.human.choose();
-      this.computer.choose();
-      this.displayRoundWinner();
-      this.score.updateScore(this.roundWinner);
+      console.clear();
+      this.computer.choose(this.history);
+
+      this.oneRound = makeMove(this.human, this.computer);
+      this.oneRound.determineRoundWinner();
+      let winner = this.oneRound.roundWinner;
+      this.oneRound.displayRoundWinner();
+
+      this.history.updateHistory(this.human.move, this.computer.move, winner);
+      this.history.displayHistory();
+
+      this.score.updateScore(winner);
       this.score.displayScore();
       if (this.completedRounds()) break;
+      this.nextRoundMessage();
     }
   },
 
@@ -140,8 +250,10 @@ const RPSGame = { // engine object: procedural program flow
 
   play() {
     this.displayWelcomeMessage();
+    this.displayRules();
     while (true) {
-      this.score = keepScore();
+      this.history = createHistory();
+      this.score = scoreKeeper();
       this.playOneGame();
       this.determineGameWinner();
       this.displayGameWinner();
@@ -152,132 +264,3 @@ const RPSGame = { // engine object: procedural program flow
 };
 
 RPSGame.play();
-
-/*
-bonus features:
-
-  3. keep track of history of moves
-
-  4. adjust computer choice based on history
-
-*/
-
-
-// =========== rps without bonus features
-
-/*
-
-const readline = require('readline-sync');
-
-function createPlayer() { // object factory
-  return {
-    move: null,
-  };
-}
-
-function createHuman() {  // object factory
-  let playerObject = createPlayer();
-
-  let humanObject = {
-    choose() {
-      let choice;
-
-      while (true) {
-        console.log("Please choose rock, paper, or scissors: ");
-        choice = readline.question();
-        if (["rock", "paper", "scissors"].includes(choice)) break;
-        console.log("Sorry, invalid choice.");
-      }
-
-      this.move = choice;
-    },
-  };
-  return Object.assign(playerObject, humanObject);
-}
-
-function createComputer() {  // object factory
-  let playerObject = createPlayer();
-
-  let computerObject = {
-    choose() {
-      const choices = ["rock", "paper", "scissors"];
-      let randomIndex = Math.floor(Math.random() * choices.length);
-      this.move = choices[randomIndex];
-    },
-  };
-  return Object.assign(playerObject, computerObject);
-}
-
-// function createMove() {
-//   return {
-//     // possible state: type of move (paper, rock, scissors)
-//   };
-// }
-
-// function createRule() {
-//   return {
-//     // possible state? not clear whether Rules need state
-//   };
-// }
-
-// // Since we don't yet know where to put `compare`, let's define
-// // it as an ordinary function.
-// let compare = function (move1, move2) {
-//   // not yet implemented
-// };
-
-const RPSGame = { // engine object: procedural program flow
-  human: createHuman(),
-  computer: createComputer(),
-
-  displayWelcomeMessage() {
-    console.log("Welcome to Rock, Paper, Scissors!");
-  },
-
-  displayGoodbyeMessage() {
-    console.log("Thanks for playing Rock, Paper, Scissors. Goodbye!");
-  },
-
-  displayWinner() {
-    let humanMove = this.human.move;
-    let computerMove = this.computer.move;
-
-    console.log(`You chose: ${this.human.move}`);
-    console.log(`The computer chose: ${this.computer.move}`);
-
-    if ((humanMove === 'rock' && computerMove === 'scissors') ||
-      (humanMove === 'paper' && computerMove === 'rock') ||
-      (humanMove === 'scissors' && computerMove === 'paper')) {
-      console.log('You win!');
-    } else if ((humanMove === 'rock' && computerMove === 'paper') ||
-      (humanMove === 'paper' && computerMove === 'scissors') ||
-      (humanMove === 'scissors' && computerMove === 'rock')) {
-      console.log('Computer wins!');
-    } else {
-      console.log("It's a tie");
-    }
-  },
-
-  playAgain() {
-    console.log("Would you like to play again? (y/n) ");
-    let answer = readline.question();
-    return answer.toLowerCase()[0] === "y";
-  },
-
-  play() {
-    this.displayWelcomeMessage();
-    while (true) {
-      this.human.choose();
-      this.computer.choose();
-      this.displayWinner();
-      // calculate score
-      // display score
-      if (!this.playAgain()) break;
-    }
-    this.displayGoodbyeMessage();
-  },
-};
-
-RPSGame.play();
-
-*/
