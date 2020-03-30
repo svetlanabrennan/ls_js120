@@ -39,7 +39,7 @@ function createHuman() {
 }
 
 // eslint-disable-next-line max-lines-per-function
-function createComputer() {  // object factory
+function createComputer() {
   let playerObject = createPlayer();
 
   let computerObject = {
