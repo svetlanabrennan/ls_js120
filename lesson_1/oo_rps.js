@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 const readline = require('readline-sync');
 
 const ROUNDS = 5;
@@ -27,11 +28,30 @@ function createHuman() {
 
       while (true) {
         console.log("");
-        console.log("Please choose rock, paper, scissors, lizard or spock: ");
-        choice = readline.question();
-        if (["rock", "paper", "scissors", "lizard", "spock"].includes(choice)) break;
+        console.log("Please choose rock, paper, scissors, lizard or spock.");
+        console.log("Type the first two letters of the move you want to make: ");
+        choice = readline.question().toLowerCase();
+        if (["ro", "pa", "sc", "li", "sp"].includes(choice)) break;
         console.log("Sorry, invalid choice.");
       }
+
+      switch (choice) {
+        case "ro":
+          choice = "rock";
+          break;
+        case "pa":
+          choice = "paper";
+          break;
+        case "sc":
+          choice = "scissors";
+          break;
+        case "li":
+          choice = "lizard";
+          break;
+        case "sp":
+          choice = "spock";
+      }
+
       this.move = choice;
     },
   };
@@ -177,6 +197,7 @@ const RPSGame = {
   history: null,
 
   displayWelcomeMessage() {
+    console.clear();
     console.log("Welcome to Rock, Paper, Scissors, Lizard, Spock!");
     console.log("Win 5 rounds to win the game.");
     console.log();
@@ -243,9 +264,14 @@ const RPSGame = {
   },
 
   playAgain() {
-    console.log("Would you like to play again? (y/n) ");
-    let answer = readline.question();
-    return answer.toLowerCase()[0] === "y";
+    let answer;
+    while (true) {
+      console.log("Would you like to play again? (y/n) ");
+      answer = readline.question().toLowerCase();
+      if (["yes", "no", "n", "y"].includes(answer)) break;
+      console.log("Invalid answer. Try again!");
+    }
+    return answer[0] === "y";
   },
 
   play() {
