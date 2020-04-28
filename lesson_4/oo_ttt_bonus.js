@@ -112,6 +112,8 @@ class TTTGame {
     ["3", "5", "7"],            // diagonal: bottom-left to top-right
   ];
 
+  static MATCH_SCORE = 3;
+
   static joinOr(arr, separator = ", ", word = "or") {
     if (arr.length === 1) {
       return arr[0];
@@ -127,23 +129,22 @@ class TTTGame {
     this.board = new Board();
     this.human = new Human();
     this.computer = new Computer();
+    this.score = { human: 0, computer: 0 };
   }
 
   play() {
     this.displayWelcomeMessage();
 
-    while (true) {
-      this.playOneRound();
-      if (this.playAgain() === "n") break;
+    do {
+      this.playOneGame();
+      // this.displayMatchResults();
+    } while (!this.matchOver() && this.playAgain());
 
-      console.clear();
-      this.board = new Board(); // check if this is a good way to reset board
-    }
-
+    this.displayMatchResults();
     this.displayGoodbyeMessage();
   }
 
-  playOneRound() {
+  playOneGame() {
     this.board.display();
 
     while (true) {
@@ -157,28 +158,47 @@ class TTTGame {
     }
 
     this.board.displayWithClear();
-    this.displayResults();
+    this.displayRoundResults();
+    this.updateScore();
+    this.displayRoundScore();
+    this.board = new Board();
+  }
+
+  updateScore() {
+    if (this.isWinner(this.human)) {
+      this.score.human += 1;
+    } else if (this.isWinner(this.computer)) {
+      this.score.computer += 1;
+    }
   }
 
   displayWelcomeMessage() {
     console.clear();
     console.log("Welcome to Tic Tac Toe!");
+    console.log(`First one to win ${TTTGame.MATCH_SCORE} rounds wins the match!`);
     console.log("");
   }
 
   displayGoodbyeMessage() {
-    console.clear();
     console.log("Thanks for playing Tic Tac Toe! Goodbye!");
   }
 
-  displayResults() {
+  displayRoundResults() {
+    console.clear();
     if (this.isWinner(this.human)) {
-      console.log("You won! Congratulations!");
+      console.log("You won this round!");
     } else if (this.isWinner(this.computer)) {
-      console.log("Computer won! Better luck next time.");
+      console.log("Computer won this round!");
     } else {
-      console.log("A tie game. How boring.");
+      console.log("It's a tie");
     }
+  }
+
+  displayRoundScore() {
+    console.log("");
+    console.log(`Your score: ${this.score.human}`);
+    console.log(`Computer score: ${this.score.computer}`);
+    console.log("");
   }
 
   humanMoves() {
@@ -263,6 +283,19 @@ class TTTGame {
     });
   }
 
+  matchOver() {
+    return Object.values(this.score).some(num => num === TTTGame.MATCH_SCORE);
+  }
+
+  displayMatchResults() {
+    console.clear();
+    if (this.score.human > this.score.computer) {
+      console.log("Congrats! You win the match.");
+    } else if (this.score.computer > this.score.human) {
+      console.log("Computer wins this match!");
+    }
+  }
+
   playAgain() {
     let answer;
 
@@ -271,7 +304,7 @@ class TTTGame {
       if (answer === "y" || answer === "n") break;
       console.log(`Input invalid. Enter "y" or "n".`);
     }
-    return answer;
+    return answer === "y";
   }
 }
 
