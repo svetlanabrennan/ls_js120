@@ -114,30 +114,22 @@ class TTTGame {
 
   static MATCH_SCORE = 3;
 
-  static joinOr(arr, separator = ", ", word = "or") {
-    if (arr.length === 1) {
-      return arr[0];
-    } else if (arr.length === 2) {
-      return arr.join(` ${word} `)
-    } else if (arr.length >= 3) {
-      return arr.slice(0, arr.length - 1)
-        .join(separator) + `${separator}${word} ${arr[arr.length - 1]}`;
-    }
-  }
-
   constructor() {
     this.board = new Board();
     this.human = new Human();
     this.computer = new Computer();
     this.score = { human: 0, computer: 0 };
+    this.currentPlayer = null;
   }
 
   play() {
     this.displayWelcomeMessage();
+    this.assignPlayer();
 
     do {
       this.playOneGame();
-      // this.displayMatchResults();
+      this.currentPlayer = this.switchPlayers();
+      this.board = new Board();
     } while (!this.matchOver() && this.playAgain());
 
     this.displayMatchResults();
@@ -145,31 +137,20 @@ class TTTGame {
   }
 
   playOneGame() {
+    console.clear();
     this.board.display();
 
     while (true) {
-      this.humanMoves();
-      if (this.gameOver()) break;
-
-      this.computerMoves();
+      this.playerMoves();
       if (this.gameOver()) break;
 
       this.board.displayWithClear();
+      this.currentPlayer = this.switchPlayers();
     }
 
-    this.board.displayWithClear();
     this.displayRoundResults();
-    this.updateScore();
+    this.updateRoundScore();
     this.displayRoundScore();
-    this.board = new Board();
-  }
-
-  updateScore() {
-    if (this.isWinner(this.human)) {
-      this.score.human += 1;
-    } else if (this.isWinner(this.computer)) {
-      this.score.computer += 1;
-    }
   }
 
   displayWelcomeMessage() {
@@ -179,8 +160,43 @@ class TTTGame {
     console.log("");
   }
 
-  displayGoodbyeMessage() {
-    console.log("Thanks for playing Tic Tac Toe! Goodbye!");
+  askForFirstPlayer() {
+    let answer;
+    while (true) {
+      answer = readline.question("Who will go first? Press 1 for You or 2 for Computer: ");
+      answer.toString();
+      if (answer === "1" || answer === "2") break;
+      console.log("Invalid selection. Try again.");
+    }
+    return answer;
+  }
+
+  assignPlayer() {
+    if (this.askForFirstPlayer() === "1") {
+      this.currentPlayer = this.human;
+    } else {
+      this.currentPlayer = this.computer;
+    }
+  }
+
+  switchPlayers() {
+    return this.currentPlayer === this.human ? this.computer : this.human;
+  }
+
+  playerMoves() {
+    if (this.currentPlayer === this.human) {
+      this.humanMoves();
+    } else {
+      this.computerMoves();
+    }
+  }
+
+  updateRoundScore() {
+    if (this.isWinner(this.human)) {
+      this.score.human += 1;
+    } else if (this.isWinner(this.computer)) {
+      this.score.computer += 1;
+    }
   }
 
   displayRoundResults() {
@@ -219,7 +235,8 @@ class TTTGame {
   }
 
   computerMoves() {
-    let choice = this.computerOffense() || this.computerDefense() || this.pickSquareFive() || this.randomMove();
+    let choice = this.computerOffense() || this.computerDefense()
+      || this.pickSquareFive() || this.randomMove();
 
     this.board.markSquareAt(choice, this.computer.getMarker());
   }
@@ -233,9 +250,10 @@ class TTTGame {
   }
 
   findWinningSquare(player) {
-    for (let index = 0; index < TTTGame.POSSIBLE_WINNING_ROWS.length; index += 1) {
-      let winningRow = TTTGame.POSSIBLE_WINNING_ROWS[index];
-      if ((this.twoSquaresTaken(player, winningRow)) && (this.thirdSquareEmpty(winningRow))) {
+    for (let idx = 0; idx < TTTGame.POSSIBLE_WINNING_ROWS.length; idx += 1) {
+      let winningRow = TTTGame.POSSIBLE_WINNING_ROWS[idx];
+      if ((this.twoSquaresTaken(player, winningRow)) &&
+        (this.thirdSquareEmpty(winningRow))) {
         let thirdSquare = winningRow[this.findThirdSquare(winningRow)];
         return thirdSquare;
       }
@@ -288,7 +306,6 @@ class TTTGame {
   }
 
   displayMatchResults() {
-    console.clear();
     if (this.score.human > this.score.computer) {
       console.log("Congrats! You win the match.");
     } else if (this.score.computer > this.score.human) {
@@ -300,62 +317,30 @@ class TTTGame {
     let answer;
 
     while (true) {
-      answer = readline.question("Do you want to play again? Enter y/n: ").toLowerCase();
+      answer = readline.question("Do you want to play round? Enter y/n: ").toLowerCase();
       if (answer === "y" || answer === "n") break;
       console.log(`Input invalid. Enter "y" or "n".`);
     }
     return answer === "y";
   }
+
+  displayGoodbyeMessage() {
+    console.log("Thanks for playing Tic Tac Toe! Goodbye!");
+  }
+
+  static joinOr(arr, separator = ", ", word = "or") {
+    if (arr.length === 1) {
+      return arr[0];
+    } else if (arr.length === 2) {
+      return arr.join(` ${word} `);
+    } else {
+      let firstPart = arr.slice(0, -1).join(separator);
+      let secondPart = arr[arr.length - 1];
+      return `${firstPart}${separator}${word} ${secondPart}`;
+    }
+  }
+
 }
 
 let game = new TTTGame();
 game.play();
-
-
-/*
-
-randomMove() {
-    let validChoices = this.board.unusedSquares();
-    let choice;
-
-    do {
-      choice = Math.floor((9 * Math.random()) + 1).toString();
-    } while (!validChoices.includes(choice));
-    return choice;
-  }
-
-  computerDefense() {
-    let thirdSquare;
-
-    for (let index = 0; index < TTTGame.POSSIBLE_WINNING_ROWS.length; index += 1) {
-      let winningRow = TTTGame.POSSIBLE_WINNING_ROWS[index];
-      thirdSquare = this.findTwoSquares(winningRow);
-      if (thirdSquare) break;
-    }
-    console.log(thirdSquare);
-    let wait = readline.question("waiting");
-
-    return thirdSquare;
-  }
-
-  findTwoSquares(row) {
-    console.log(row);
-
-    let humanMarkersRow = row.map(value => {
-      let marker = Object.values(this.board.squares[value]);
-      return marker[0];
-    });
-    console.log(humanMarkersRow);
-
-    if (humanMarkersRow.filter(value => value === Square.HUMAN_MARKER).length === 2) {
-      let square = row.find(marker => (Object.values(this.board.squares[marker]))[0] === Square.UNUSED_SQUARE);
-      console.log(square);
-
-      if (square !== undefined) {
-        return square;
-      }
-    }
-    return null;
-  }
-
-  */
